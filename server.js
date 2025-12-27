@@ -28,7 +28,29 @@ app.get('*', (req, res) => {
       console.error('ERROR: index.html does not exist in dist directory!');
       return res.status(500).send('index.html not found. Please rebuild the application.');
     }
-    const indexHtml = readFileSync(indexPath, 'utf-8');
+    let indexHtml = readFileSync(indexPath, 'utf-8');
+    
+    // 注入運行時環境變數到 HTML（支援 Zeabur 運行時環境變數）
+    const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://lofmejhovipawspgeces.supabase.co';
+    const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxvZm1lamhvdmlwYXdzcGdlY2VzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYwMTI5MjIsImV4cCI6MjA4MTU4ODkyMn0.1IYJOLUD1SqtjmMvRtJly7z5ISVfCXcc0LpseyvnQ-I';
+    
+    // 在 </head> 之前注入環境變數腳本
+    const envScript = `
+    <script>
+      // 運行時環境變數注入（支援 Zeabur）
+      window.__RUNTIME_ENV__ = {
+        VITE_SUPABASE_URL: ${JSON.stringify(supabaseUrl)},
+        VITE_SUPABASE_ANON_KEY: ${JSON.stringify(supabaseAnonKey)}
+      };
+      console.log('🔧 運行時環境變數已注入:', {
+        url: window.__RUNTIME_ENV__.VITE_SUPABASE_URL ? '✅' : '❌',
+        key: window.__RUNTIME_ENV__.VITE_SUPABASE_ANON_KEY ? '✅' : '❌'
+      });
+    </script>`;
+    
+    // 在 </head> 標籤之前插入環境變數腳本
+    indexHtml = indexHtml.replace('</head>', envScript + '</head>');
+    
     res.setHeader('Content-Type', 'text/html');
     res.send(indexHtml);
   } catch (error) {
